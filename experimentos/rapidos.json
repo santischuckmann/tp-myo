@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "nombre": "protocolo rápido",
+  "ejecuciones": [
+    {"id": "manual-e1-s1", "etapa": 1, "instancia_path": "instancias/instancia_manual.txt", "segundos": 1, "tau": 2, "seed": null, "restrictiva": false},
+    {"id": "manual-e2-s5", "etapa": 2, "instancia_path": "instancias/instancia_manual.txt", "segundos": 5, "tau": null, "seed": null, "restrictiva": false},
+    {"id": "chica-e1-s1", "etapa": 1, "instancia_path": "instancias/instancia_chica.txt", "segundos": 1, "tau": 47, "seed": 42, "restrictiva": false},
+    {"id": "chica-e2-s3", "etapa": 2, "instancia_path": "instancias/instancia_chica.txt", "segundos": 3, "tau": null, "seed": 42, "restrictiva": false},
+    {"id": "pesada-e1-s3", "etapa": 1, "instancia_path": "instancias/instancia_pesada.txt", "segundos": 3, "tau": 817, "seed": 777, "restrictiva": false},
+    {"id": "pesada-e2-s3", "etapa": 2, "instancia_path": "instancias/instancia_pesada.txt", "segundos": 3, "tau": null, "seed": 777, "restrictiva": false},
+    {"id": "restrictiva-e1-s3", "etapa": 1, "instancia_path": "instancias/instancia_sin_solucion.txt", "segundos": 3, "tau": 1268, "seed": 999, "restrictiva": true},
+    {"id": "restrictiva-e2-s3", "etapa": 2, "instancia_path": "instancias/instancia_sin_solucion.txt", "segundos": 3, "tau": null, "seed": 999, "restrictiva": true}
+  ]
+}

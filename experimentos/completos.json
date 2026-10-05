@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "nombre": "protocolo completo opcional",
+  "ejecuciones": [
+    {"id": "pesada-e1-s3", "etapa": 1, "instancia_path": "instancias/instancia_pesada.txt", "segundos": 3, "tau": 817, "seed": 777, "restrictiva": false},
+    {"id": "pesada-e1-s10", "etapa": 1, "instancia_path": "instancias/instancia_pesada.txt", "segundos": 10, "tau": 817, "seed": 777, "restrictiva": false},
+    {"id": "pesada-e1-s60", "etapa": 1, "instancia_path": "instancias/instancia_pesada.txt", "segundos": 60, "tau": 817, "seed": 777, "restrictiva": false},
+    {"id": "pesada-e2-s3", "etapa": 2, "instancia_path": "instancias/instancia_pesada.txt", "segundos": 3, "tau": null, "seed": 777, "restrictiva": false},
+    {"id": "pesada-e2-s10", "etapa": 2, "instancia_path": "instancias/instancia_pesada.txt", "segundos": 10, "tau": null, "seed": 777, "restrictiva": false},
+    {"id": "pesada-e2-s60", "etapa": 2, "instancia_path": "instancias/instancia_pesada.txt", "segundos": 60, "tau": null, "seed": 777, "restrictiva": false},
+    {"id": "restrictiva-e1-s3", "etapa": 1, "instancia_path": "instancias/instancia_sin_solucion.txt", "segundos": 3, "tau": 1268, "seed": 999, "restrictiva": true},
+    {"id": "restrictiva-e1-s10", "etapa": 1, "instancia_path": "instancias/instancia_sin_solucion.txt", "segundos": 10, "tau": 1268, "seed": 999, "restrictiva": true},
+    {"id": "restrictiva-e1-s60", "etapa": 1, "instancia_path": "instancias/instancia_sin_solucion.txt", "segundos": 60, "tau": 1268, "seed": 999, "restrictiva": true},
+    {"id": "restrictiva-e2-s3", "etapa": 2, "instancia_path": "instancias/instancia_sin_solucion.txt", "segundos": 3, "tau": null, "seed": 999, "restrictiva": true},
+    {"id": "restrictiva-e2-s10", "etapa": 2, "instancia_path": "instancias/instancia_sin_solucion.txt", "segundos": 10, "tau": null, "seed": 999, "restrictiva": true},
+    {"id": "restrictiva-e2-s60", "etapa": 2, "instancia_path": "instancias/instancia_sin_solucion.txt", "segundos": 60, "tau": null, "seed": 999, "restrictiva": true}
+  ]
+}
