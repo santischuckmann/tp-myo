@@ -1,32 +1,68 @@
 # Control de tiempos y optimización paramétrica
 
-Trabajo práctico de Modelado y Optimización. La aplicación resuelve planes de producción enteros con PySCIPOpt y busca una capacidad eléctrica `tau` que maximiza el beneficio neto.
+El enunciado plantea dos decisiones para una fábrica de paneles acústicos: cuántas unidades producir de cada diseño y qué potencia eléctrica contratar. Contratar más potencia puede permitir una mayor producción, pero también aumenta el costo de infraestructura. El objetivo es encontrar el mejor beneficio neto dentro del tiempo disponible.
 
-Fecha de entrega docente: **7 de octubre de 2026**.
+Resolvimos el problema en Python con PySCIPOpt, siguiendo las dos etapas de la consigna.
 
-## Modelo
+## Cómo representamos el problema
 
-Para una capacidad fija `tau`, las variables enteras `x[j]` cumplen `0 <= x[j] <= u[j]`. El modelo maximiza la ganancia operativa:
+Cada variable `x[j]` indica cuántos paneles fabricar del diseño `j`. Las cantidades son enteras, no negativas y tienen un máximo `u[j]`. Cada unidad aporta un beneficio `c[j]`, utiliza recursos internos según `a[i][j]` y requiere una potencia `w[j]`.
 
-```text
-max sum(c[j] * x[j])
-sum(a[i][j] * x[j]) <= b[i]       para cada recurso i
-sum(w[j] * x[j]) <= tau
-```
-
-El beneficio neto usado para comparar capacidades es:
+Un plan de producción debe respetar tanto la disponibilidad `b[i]` de cada recurso como la potencia contratada `tau`. Para comparar distintas capacidades, descontamos de la ganancia de producción el costo de infraestructura del enunciado:
 
 ```text
-ganancia_operativa - beta * tau**2
+beneficio neto = ganancia de producción - beta * tau²
 ```
 
-Una solución obtenida por timeout es válida si SCIP dejó un incumbent, pero no se denomina `Pi(tau)` ni se marca como óptima. El archivo `instancia_sin_solucion.txt` tiene un nombre engañoso: `x=0` siempre es factible para datos válidos. Puede ocurrir que SCIP no encuentre un incumbent dentro de un límite corto, lo cual no prueba infactibilidad.
+El costo depende de la potencia contratada, aunque el plan elegido utilice menos.
 
-## Entorno verificado
+## Etapa 1: producir con una capacidad fija
 
-La implementación fue verificada en Windows 11 de 64 bits con Python 3.13.16, PySCIPOpt 6.2.1, SCIP 10.0.2, pytest 9.1.1 y openpyxl 3.1.5. `requirements.txt` fija el entorno completo utilizado.
+En `resolver_modelo(path_instancia, segundos, tau)` fijamos la potencia contratada y buscamos el plan de producción que dé la mayor ganancia sin superar los recursos disponibles. Como el costo de infraestructura es fijo para ese `tau`, maximizar la ganancia también maximiza el beneficio neto.
 
-Desde PowerShell, en la raíz del proyecto:
+El tiempo solicitado limita la resolución del modelo. Medimos además el tiempo total de la función, que incluye leer los datos y preparar el problema.
+
+Si se encuentra una solución, informamos las cantidades a producir, su ganancia, el beneficio neto y si se pudo demostrar que es óptima para esa capacidad.
+
+## Etapa 2: elegir la capacidad
+
+En `busqueda_tau(path_instancia, segundos)` probamos distintas potencias y conservamos el plan con mayor beneficio neto. La búsqueda abarca valores enteros entre cero y `U`, la potencia necesaria para fabricar el máximo permitido de todos los diseños.
+
+Cuando el rango es pequeño, recorremos todas las capacidades mientras alcance el tiempo. Para rangos grandes, primero probamos valores repartidos a lo largo del intervalo y luego exploramos alrededor de los que dieron mejores resultados. Esta segunda estrategia permite buscar con un tiempo acotado, aunque puede dejar capacidades mejores sin evaluar.
+
+Como pide la consigna, construimos el modelo una sola vez y, entre evaluaciones, cambiamos únicamente la capacidad eléctrica. El tiempo es global para toda la búsqueda: incluye lectura, preparación y resoluciones. Antes de cada evaluación calculamos cuánto queda y detenemos la búsqueda si resulta insuficiente. Registramos el tiempo real utilizado, incluido cualquier pequeño exceso al finalizar una resolución.
+
+## Cómo interpretar los resultados
+
+Una solución **factible** cumple las restricciones. Una solución **óptima** tiene además la garantía de que no existe otra mejor dentro del problema evaluado.
+
+En la etapa 1, esa garantía corresponde a la potencia fijada. En la etapa 2, sólo declaramos un óptimo global si evaluamos todas las capacidades y demostramos el óptimo de cada una. En los demás casos informamos la mejor solución encontrada, sin garantía global. El valor `Pi(tau)` del enunciado representa la ganancia óptima para esa capacidad; una solución obtenida al agotarse el tiempo puede tener una ganancia menor.
+
+Si el tiempo termina antes de encontrar una solución factible, lo indicamos expresamente. Eso por sí solo no demuestra que el problema sea imposible. En particular, la instancia docente llamada `instancia_sin_solucion.txt` tiene restricciones más ajustadas, pero producir cero unidades sigue siendo factible.
+
+## Instancias y comprobaciones
+
+Los datos se cargan desde archivos externos mediante `leer_instancia(path_instancia: str)`, respetando el formato del generador docente y detectando archivos inexistentes o mal formados.
+
+Incluimos una instancia manual de 3 diseños y 2 recursos, una chica del generador y las dos instancias grandes provistas por este. Las pruebas revisan la lectura, las restricciones, el control del tiempo y el manejo de los estados del solver, incluidos los casos en que no llega a encontrar una solución.
+
+En la instancia manual comparamos la respuesta con todas las combinaciones posibles. La mejor decisión es contratar `tau=2` y producir dos unidades del segundo diseño: la ganancia es 14, el costo de infraestructura es 2 y el beneficio neto es **12**.
+
+## Reporte de la entrega
+
+El archivo [entrega.xlsx](resultados/entrega.xlsx) reúne las ejecuciones en dos hojas, una por etapa. Cada fila tiene las cinco columnas solicitadas:
+
+1. Instancia y ejecución.
+2. Mejor solución factible encontrada y su valor.
+3. Potencia contratada correspondiente.
+4. Garantía de optimalidad.
+5. Tiempo solicitado y efectivamente utilizado.
+
+El archivo [entrega.json](resultados/entrega.json) conserva también el detalle de las capacidades evaluadas. En las ejecuciones guardadas, la etapa 2 encontró y certificó el óptimo global de las instancias manual y chica. Para las grandes, las búsquedas de tres segundos terminaron sin garantía global. En la etapa 1, la instancia restrictiva devolvió una solución factible al alcanzar el límite de tiempo, sin demostrar optimalidad.
+
+## Cómo ejecutarlo
+
+Desde PowerShell, en la carpeta del proyecto, con Python 3.13:
 
 ```powershell
 py -3.13 -m venv .venv
@@ -34,93 +70,23 @@ py -3.13 -m venv .venv
 .\.venv\Scripts\python.exe scripts\verificar_entorno.py
 ```
 
-No hace falta activar el entorno. Si el launcher `py` no detecta Python, se puede crear `.venv` con la ruta completa de `python.exe` y luego usar siempre `.\.venv\Scripts\python.exe`.
-
-## Instancias
-
-El formato UTF-8 admite líneas vacías y comentarios cuya línea comienza con `#`:
-
-```text
-N <diseños>
-M <recursos>
-BETA <factor>
-B <recurso> <disponibilidad>
-DISENO <diseño> <beneficio> <potencia> <cota>
-A <recurso> <diseño> <coeficiente>
-```
-
-Los índices del archivo empiezan en 1. Internamente `a[i][j]` representa el consumo del recurso `i` por el diseño `j`. Los coeficientes `A` pueden ser negativos. El lector detecta índices inválidos, duplicados, registros faltantes, tipos incorrectos y dimensiones incoherentes.
-
-Para regenerar las tres instancias aleatorias sin modificar el generador docente:
-
-```powershell
-.\.venv\Scripts\python.exe -m scripts.generar_instancias
-```
-
-Semillas: chica 42 (N=3, M=2), pesada 777 (N=80, M=25) y restrictiva 999 (N=120, M=40).
-
-## Uso
-
-Etapa 1, capacidad fija:
+Para probar las dos etapas con la instancia manual:
 
 ```powershell
 .\.venv\Scripts\python.exe -m tp_modelado etapa1 instancias\instancia_manual.txt --segundos 1 --tau 2 --salida resultados\manual_e1
-```
-
-Etapa 2, búsqueda de capacidad:
-
-```powershell
 .\.venv\Scripts\python.exe -m tp_modelado etapa2 instancias\instancia_manual.txt --segundos 5 --salida resultados\manual_e2
 ```
 
-La salida se muestra en la terminal y se guarda en `<salida>.json` y `<salida>.xlsx`. La CLI se niega a reemplazar archivos existentes; para hacerlo deliberadamente se debe agregar `--sobrescribir`.
+Los resultados se muestran en la terminal y se guardan en JSON y Excel. Para reemplazar una salida existente, agregar `--sobrescribir`.
 
-Para ejecutar el protocolo breve de ocho casos:
-
-```powershell
-.\.venv\Scripts\python.exe -m tp_modelado experimentos --config experimentos\rapidos.json --salida resultados\entrega
-```
-
-Para repetir una entrada diez veces, agregar `"repeticiones": 10` a esa entrada del protocolo. Cada resultado recibe un sufijo `-r1` a `-r10` y una fila propia. También se puede regenerar un Excel sin ejecutar SCIP:
+Para repetir las ocho ejecuciones de la entrega con un nuevo nombre de salida:
 
 ```powershell
-.\.venv\Scripts\python.exe -m tp_modelado exportar --json resultados\entrega.json --excel resultados\entrega_regenerada.xlsx
+.\.venv\Scripts\python.exe -m tp_modelado experimentos --config experimentos\rapidos.json --salida resultados\nueva_entrega
 ```
 
-## Búsqueda y tiempos
-
-Si `U=sum(w[j]*u[j])` es como máximo 200, se recorren todas las capacidades de 0 a U. La garantía global sólo es verdadera cuando todas fueron resueltas a optimalidad.
-
-Para U mayor, se evalúa una grilla reproducible de 17 puntos que contiene 0 y U. Luego se refinan hasta tres de los mejores centros durante un máximo de ocho rondas, sin repetir capacidades. Esta estrategia es heurística; no supone unimodalidad y, normalmente, informa «mejor solución encontrada, sin garantía global».
-
-La etapa 1 aplica `segundos` a una única resolución de SCIP; su tiempo total incluye además lectura y construcción. La etapa 2 inicia un reloj monotónico al entrar, usa un deadline global y recalcula el restante antes de cada resolución. Lectura, construcción, cambios de RHS y extracción cuentan dentro del límite global. SCIP y Python pueden exceder ligeramente el deadline antes de devolver control; el exceso real queda registrado.
-
-Entre iteraciones se copian los valores de la solución a objetos Python, se ejecuta `freeTransform()` cuando corresponde y se cambia únicamente el RHS de potencia con `chgRhs()`. El modelo no se reconstruye. La configuración `misc/resetstat=True` fue comprobada con capacidades no monótonas: el contador de resolución vuelve a cero al liberar la transformación.
-
-## Reportes
-
-El JSON conserva parámetros, entorno, hash de entradas, solución y traza completa de capacidades. El Excel contiene las hojas `Etapa 1` y `Etapa 2`, siempre con exactamente cinco columnas:
-
-1. Instancia y ejecución.
-2. Mejor solución factible, ganancia y beneficio neto.
-3. Tau de esa solución.
-4. Garantía de optimalidad para tau fijo o global.
-5. Tiempos solicitado, total, solver y exceso.
-
-Si un vector supera el límite de una celda Excel, la hoja referencia el vector completo conservado en JSON. Ausencia de incumbent se escribe como `sin solución encontrada`; no se reemplaza por ceros ficticios.
-
-## Tests
+Para ejecutar las pruebas:
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest -q
 ```
-
-Los tests cubren lectura, argumentos inválidos, comparación contra enumeración exhaustiva, actualización de RHS, reinicio del contador SCIP, búsqueda global pequeña, JSON, Excel y protección contra sobrescritura. La instancia manual tiene óptimo global `tau=2`, `x=(0,2,0)` y beneficio neto 12.
-
-El protocolo `experimentos/completos.json` incluye presupuestos de 3, 10 y 60 segundos para las instancias grandes. Es opcional y no se ejecuta por defecto porque suma varios minutos de cuotas.
-
-## Ejecución realizada
-
-El 4 de octubre de 2026 se ejecutó `experimentos/rapidos.json`. Los resultados completos están en `resultados/entrega.json` y `resultados/entrega.xlsx`. La instancia manual y la chica fueron certificadas globalmente en la etapa 2. Las búsquedas de tres segundos sobre las instancias grandes devolvieron la mejor solución encontrada sin garantía global. La etapa 1 restrictiva terminó por `timelimit` con un incumbent válido; esto confirma que el nombre del archivo no describe infactibilidad matemática.
-
-En la ejecución final guardada, las búsquedas grandes consumieron el presupuesto global y la pesada registró un pequeño exceso mientras SCIP devolvía el control. El reporte conserva el valor medido en lugar de truncarlo. Los resultados dependen de la carga y del equipo, por lo que deben regenerarse si se cambia el entorno fijado.
